@@ -7,6 +7,7 @@ remote_theme: jekyll/minima
 
 minima:
   skin: dark
+  date_format: "%Y년 %m월 %d일"
 
 author:
   name: "블로그 운영자"
