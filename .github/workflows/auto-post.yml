@@ -3,7 +3,12 @@ name: Auto Blog Post
 on:
   schedule:
     - cron: '0 0 * * *'  # 매일 오전 9시 (한국시간)
-  workflow_dispatch:       # 수동 실행 버튼도 생겨요
+  workflow_dispatch:
+    inputs:
+      post_count:
+        description: '생성할 글 개수 (최대 25)'
+        required: false
+        default: '1'
 
 jobs:
   generate-post:
@@ -26,6 +31,7 @@ jobs:
       - name: Generate post
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          POST_COUNT: ${{ github.event.inputs.post_count || '1' }}
         run: python generate_post.py
 
       - name: Commit and push
