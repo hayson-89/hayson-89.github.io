@@ -2,7 +2,7 @@ name: Auto Blog Post
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 매일 오전 9시 (한국시간)
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       post_count:
@@ -31,6 +31,7 @@ jobs:
       - name: Generate post
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
           POST_COUNT: ${{ github.event.inputs.post_count || '1' }}
         run: python generate_post.py
 
