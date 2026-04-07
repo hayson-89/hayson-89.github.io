@@ -17,3 +17,5 @@ show_excerpts: true
 plugins:
   - jekyll-feed
   - jekyll-remote-theme
+  - jekyll-sitemap
+  - jekyll-seo-tag
