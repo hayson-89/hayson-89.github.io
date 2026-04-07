@@ -1,0 +1,14 @@
+
+title: "IT 테크 블로그"
+description: "매일 업데이트되는 최신 IT 기술 정보"
+url: "https://hayson-89.github.io"
+
+theme: minima
+
+author:
+  name: "블로그 운영자"
+
+show_excerpts: true
+
+plugins:
+  - jekyll-feed
