@@ -2,7 +2,7 @@ name: Sports Blog Post
 
 on:
   schedule:
-    - cron: '0 22 * * *'  # 매일 오전 7시 (한국시간)
+    - cron: '0 22 * * *'
   workflow_dispatch:
     inputs:
       post_count:
@@ -24,7 +24,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install anthropic
+        run: |
+          pip install anthropic playwright Pillow
+          playwright install chromium
+          playwright install-deps chromium
 
       - name: Generate sports post & send email
         env:
