@@ -1,0 +1,35 @@
+name: Sports Blog Post
+
+on:
+  schedule:
+    - cron: '0 22 * * *'  # 매일 오전 7시 (한국시간)
+  workflow_dispatch:
+    inputs:
+      post_count:
+        description: '생성할 글 개수 (1~4)'
+        required: false
+        default: '2'
+
+jobs:
+  generate-sports-post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate sports post & send email
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          POST_COUNT: ${{ github.event.inputs.post_count || '2' }}
+        run: python generate_sports.py
