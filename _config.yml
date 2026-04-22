@@ -3,7 +3,7 @@ description: "매일 업데이트되는 최신 IT 기술 정보"
 url: "https://hayson-89.github.io"
 lang: ko
 
-remote_theme: jekyll/minima
+remote_theme: jekyll/minima@1e8a445
 
 minima:
   skin: dark
@@ -16,6 +16,6 @@ show_excerpts: true
 
 plugins:
   - jekyll-feed
-remote_theme: jekyll/minima@1e8a445
+  - jekyll-remote-theme
   - jekyll-sitemap
   - jekyll-seo-tag
