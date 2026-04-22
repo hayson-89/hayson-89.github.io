@@ -74,18 +74,39 @@ keyword_map = {
     "부업": "online business laptop",
 }
 
+MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+]
+
 
 def call_gemini(prompt):
-    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           "gemini-1.5-flash:generateContent?key=" + gemini_key)
-    body = {"contents": [{"parts": [{"text": prompt}]}]}
-    res = requests.post(url, json=body, timeout=30)
-    data = res.json()
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        print("Gemini 오류: " + str(e))
-        return None
+    for model in MODELS:
+        try:
+            url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                   + model + ":generateContent?key=" + gemini_key)
+            body = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048,
+                }
+            }
+            res = requests.post(url, json=body, timeout=30)
+            data = res.json()
+
+            if "candidates" in data:
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                print("모델 사용: " + model)
+                return text
+            else:
+                print("모델 " + model + " 실패: " + str(data.get("error", {}).get("message", str(data))))
+                time.sleep(2)
+        except Exception as e:
+            print("모델 " + model + " 오류: " + str(e))
+            time.sleep(2)
+    return None
 
 
 def get_trending_topics():
@@ -179,11 +200,7 @@ for i, topic in enumerate(selected):
     print("[" + str(i+1) + "/" + str(count) + "] " + topic[:40])
 
     img_large, img_small, photographer = get_unsplash_image(topic)
-
-    # thumbnail front matter
     thumbnail_line = ('thumbnail: "' + img_small + '"\n') if img_small else ""
-
-    # 본문 이미지 블록
     img_block = ""
     if img_large:
         img_block = "\n\n![" + topic + "](" + img_large + ")\n*© " + photographer + " / Unsplash*\n\n"
@@ -213,8 +230,6 @@ for i, topic in enumerate(selected):
 
     if "---" in content:
         content = content[content.find("---"):]
-
-    # 코드블록 제거 (```yaml 등)
     content = content.replace("```yaml", "").replace("```markdown", "").replace("```", "")
 
     slug = topic[:30].replace(" ", "-")
@@ -227,6 +242,6 @@ for i, topic in enumerate(selected):
 
     print("완료: " + filename)
     if i < len(selected) - 1:
-        time.sleep(1)
+        time.sleep(2)
 
 print("모든 글 생성 완료!")
