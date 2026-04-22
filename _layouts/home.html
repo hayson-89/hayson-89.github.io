@@ -1,0 +1,50 @@
+---
+layout: default
+---
+
+<div class="home">
+
+  <!-- 배너 광고란 -->
+  <div class="banner-ad">
+    <!-- 광고 코드를 여기에 삽입하세요 -->
+    <p>광고 배너 영역 (728 x 90)</p>
+    <p style="font-size:11px;margin-top:4px">AdSense 승인 후 아래 코드로 교체하세요</p>
+    <!-- 예시: <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px" data-ad-client="ca-pub-5670639006214542" data-ad-slot="XXXXXXXXXX"></ins> -->
+  </div>
+
+  <ul class="post-list">
+    {% for post in site.posts %}
+    <li>
+      <a href="{{ post.url | relative_url }}" style="text-decoration:none;display:block">
+        {% if post.thumbnail %}
+          <img class="post-thumbnail" src="{{ post.thumbnail }}" alt="{{ post.title }}" loading="lazy">
+        {% else %}
+          <div class="post-thumbnail-placeholder">💻</div>
+        {% endif %}
+      </a>
+      <div class="post-list-item-body">
+        {% if post.category %}
+          <span class="post-category {{ post.category_class }}">{{ post.category }}</span>
+        {% endif %}
+        <h3><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+        <p class="post-meta">
+          {{ post.date | date: "%Y년 %m월 %d일" }}
+          <span class="view-count" id="vc-{{ post.url | slugify }}">조회 -</span>
+        </p>
+        {% if post.description %}<p>{{ post.description }}</p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+
+</div>
+
+<!-- Google Analytics 조회수 표시 -->
+<script>
+// 간단한 조회수 카운터 (localStorage 기반 — 실제 GA 데이터는 GA4 API 필요)
+document.querySelectorAll('[id^="vc-"]').forEach(function(el) {
+  var key = 'vc_' + el.id;
+  var count = parseInt(localStorage.getItem(key) || '0');
+  el.textContent = '조회 ' + count.toLocaleString();
+});
+</script>
