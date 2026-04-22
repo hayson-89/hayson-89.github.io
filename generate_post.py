@@ -37,6 +37,11 @@ fallback_topics = [
     "스마트홈 구축하는 방법",
     "구글 Gemini AI 완벽 가이드",
     "챗GPT로 업무 자동화하는 방법",
+    "디지털 노마드 되는 방법",
+    "온라인 부업으로 수익 만드는 법",
+    "유튜브 채널 성장 전략",
+    "구글 검색 잘하는 방법",
+    "윈도우 단축키 완벽 정리",
 ]
 
 keyword_map = {
@@ -64,6 +69,9 @@ keyword_map = {
     "스마트홈": "smart home iot technology",
     "GPT": "artificial intelligence chatbot",
     "Gemini": "google ai technology",
+    "유튜브": "youtube video content",
+    "디지털": "digital nomad laptop",
+    "부업": "online business laptop",
 }
 
 
@@ -76,8 +84,7 @@ def call_gemini(prompt):
     try:
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        print("Gemini 응답 오류: " + str(e))
-        print(str(data))
+        print("Gemini 오류: " + str(e))
         return None
 
 
@@ -130,7 +137,7 @@ def get_unsplash_image(topic):
         req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=10) as res:
             data = json.loads(res.read().decode())
-        return data["urls"]["regular"], data["user"]["name"], data["links"]["html"]
+        return data["urls"]["regular"], data["urls"]["small"], data["user"]["name"]
     except Exception as e:
         print("이미지 실패: " + str(e))
         return None, None, None
@@ -165,41 +172,50 @@ existing = get_existing_titles()
 trending = get_trending_topics()
 all_topics = list(dict.fromkeys(trending + fallback_topics))
 unique = [t for t in all_topics if not is_duplicate(t, existing)]
-selected = random.sample(unique if unique else fallback_topics, min(count, len(unique if unique else fallback_topics)))
+pool = unique if unique else fallback_topics
+selected = random.sample(pool, min(count, len(pool)))
 
 for i, topic in enumerate(selected):
     print("[" + str(i+1) + "/" + str(count) + "] " + topic[:40])
 
-    img_url, photographer, img_link = get_unsplash_image(topic)
+    img_large, img_small, photographer = get_unsplash_image(topic)
+
+    # thumbnail front matter
+    thumbnail_line = ('thumbnail: "' + img_small + '"\n') if img_small else ""
+
+    # 본문 이미지 블록
     img_block = ""
-    if img_url:
-        img_block = "\n\n![" + topic + "](" + img_url + ")\n*© [" + photographer + "](" + img_link + ") / Unsplash*\n\n"
+    if img_large:
+        img_block = "\n\n![" + topic + "](" + img_large + ")\n*© " + photographer + " / Unsplash*\n\n"
 
     prompt = ("다음 주제로 한국어 IT 블로그 글을 작성해줘: \"" + topic + "\"\n\n"
-              "반드시 아래 형식 그대로 출력해:\n\n"
+              "반드시 아래 형식 그대로 출력해. 앞에 다른 텍스트 절대 없이:\n\n"
               "---\n"
               "layout: post\n"
               "title: \"글 제목\"\n"
               "date: " + date_str + "\n"
               "description: \"한 줄 요약 (80자 이내)\"\n"
-              "---\n\n"
+              + thumbnail_line +
+              "---\n"
               + img_block +
-              "본문 내용\n\n"
+              "\n본문 내용\n\n"
               "규칙:\n"
               "- 본문 800자 이상\n"
               "- 소제목(##) 3개 이상\n"
               "- 실용적이고 유익한 내용\n"
               "- 친근한 문체\n"
-              "- 맨 앞 --- 부터 시작. 앞에 다른 텍스트 없이")
+              "- 이모지 금지")
 
     content = call_gemini(prompt)
     if not content:
         print("생성 실패, 건너뜀")
         continue
 
-    # 앞에 불필요한 텍스트 제거
     if "---" in content:
         content = content[content.find("---"):]
+
+    # 코드블록 제거 (```yaml 등)
+    content = content.replace("```yaml", "").replace("```markdown", "").replace("```", "")
 
     slug = topic[:30].replace(" ", "-")
     slug = "".join(c for c in slug if c.isalnum() or c == "-")
