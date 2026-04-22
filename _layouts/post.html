@@ -1,0 +1,64 @@
+---
+layout: default
+---
+
+<article class="post h-entry">
+
+  <header class="post-header">
+    <h1 class="post-title">{{ page.title | escape }}</h1>
+    <p class="post-meta">
+      {{ page.date | date: "%Y년 %m월 %d일" }}
+      <span class="view-count" id="view-count-display">조회 0</span>
+    </p>
+  </header>
+
+  <!-- 본문 상단 광고 -->
+  <div class="banner-ad" style="margin-bottom:28px">
+    <!-- AdSense 승인 후 광고 코드 삽입 -->
+    <p>광고 영역</p>
+  </div>
+
+  <div class="post-content e-content">
+    {{ content }}
+  </div>
+
+  <!-- 본문 하단 광고 -->
+  <div class="banner-ad" style="margin-top:32px">
+    <p>광고 영역</p>
+  </div>
+
+  <!-- 댓글 -->
+  <div class="comments-section">
+    <p class="comments-title">댓글</p>
+    <script src="https://giscus.app/client.js"
+      data-repo="hayson-89/hayson-89.github.io"
+      data-repo-id="R_kgDOR69n7Q"
+      data-category="Announcements"
+      data-category-id="DIC_kwDOR69n7c4C7ZMa"
+      data-mapping="pathname"
+      data-strict="0"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      data-input-position="bottom"
+      data-theme="light"
+      data-lang="ko"
+      crossorigin="anonymous"
+      async>
+    </script>
+  </div>
+
+</article>
+
+<!-- 조회수 카운터 -->
+<script>
+(function() {
+  var key = 'vc_' + window.location.pathname;
+  var count = parseInt(localStorage.getItem(key) || '0') + 1;
+  localStorage.setItem(key, count);
+  document.getElementById('view-count-display').textContent = '조회 ' + count.toLocaleString();
+
+  // 목록 페이지 조회수도 업데이트
+  var slug = window.location.pathname.replace(/\//g, '-').replace(/^-|-$/g, '');
+  localStorage.setItem('vc_vc-' + slug, count);
+})();
+</script>
