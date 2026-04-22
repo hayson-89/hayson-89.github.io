@@ -1,16 +1,15 @@
-import anthropic
 import datetime
 import os
 import random
 import time
+import glob
 import urllib.request
 import urllib.parse
 import json
-import glob
+import requests
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+gemini_key = os.environ.get("GEMINI_API_KEY")
 unsplash_key = os.environ.get("UNSPLASH_ACCESS_KEY")
-youtube_key = os.environ.get("YOUTUBE_API_KEY")
 
 fallback_topics = [
     "최신 AI 도구 활용법 완벽 가이드",
@@ -37,12 +36,7 @@ fallback_topics = [
     "메타버스란 무엇인가",
     "스마트홈 구축하는 방법",
     "구글 Gemini AI 완벽 가이드",
-    "애플 비전 프로 활용법",
     "챗GPT로 업무 자동화하는 방법",
-    "유튜브 채널 성장 전략",
-    "인스타그램 알고리즘 분석",
-    "디지털 노마드 되는 방법",
-    "온라인 부업으로 수익 만드는 법",
 ]
 
 keyword_map = {
@@ -69,76 +63,30 @@ keyword_map = {
     "메타버스": "metaverse virtual reality",
     "스마트홈": "smart home iot technology",
     "GPT": "artificial intelligence chatbot",
-    "앱": "mobile app development",
-    "해킹": "cybersecurity hacker",
-    "유튜브": "youtube video content",
-    "구글": "google technology",
-    "애플": "apple technology",
+    "Gemini": "google ai technology",
 }
 
 
-def get_existing_topics():
-    """이미 발행된 글 제목 수집 → 중복 방지"""
-    existing = set()
-    for filepath in glob.glob("_posts/*.md"):
-        with open(filepath, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("title:"):
-                    title = line.replace("title:", "").strip().strip('"')
-                    # 핵심 키워드만 추출 (5글자 이상 단어)
-                    words = [w for w in title.split() if len(w) >= 5]
-                    for word in words:
-                        existing.add(word.lower())
-    return existing
-
-
-def is_duplicate(topic, existing_keywords):
-    """주제가 기존 글과 중복인지 확인"""
-    topic_words = [w for w in topic.split() if len(w) >= 5]
-    for word in topic_words:
-        if word.lower() in existing_keywords:
-            return True
-    return False
-
-
-def get_youtube_trends():
-    """YouTube IT 인기 영상 키워드 수집"""
-    if not youtube_key:
-        print("YouTube API 키 없음, 건너뜀")
-        return []
+def call_gemini(prompt):
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           "gemini-1.5-flash:generateContent?key=" + gemini_key)
+    body = {"contents": [{"parts": [{"text": prompt}]}]}
+    res = requests.post(url, json=body, timeout=30)
+    data = res.json()
     try:
-        query = urllib.parse.quote("IT 기술 2025")
-        url = ("https://www.googleapis.com/youtube/v3/search"
-               "?part=snippet&q=" + query +
-               "&type=video&order=viewCount&regionCode=KR"
-               "&relevanceLanguage=ko&maxResults=20"
-               "&key=" + youtube_key)
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=10) as res:
-            data = json.loads(res.read().decode())
-
-        topics = []
-        for item in data.get("items", []):
-            title = item["snippet"]["title"]
-            # 너무 짧거나 광고성 제목 제외
-            if len(title) > 10 and "광고" not in title and "협찬" not in title:
-                topics.append(title[:40] + " 완벽 정리")
-
-        print("YouTube 트렌드 수집: " + str(len(topics)) + "개")
-        return topics
+        return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        print("YouTube 수집 실패: " + str(e))
-        return []
+        print("Gemini 응답 오류: " + str(e))
+        print(str(data))
+        return None
 
 
-def get_google_trends():
-    """Google Trends 한국 IT 트렌드 수집"""
+def get_trending_topics():
     try:
         url = "https://trends.google.com/trending/rss?geo=KR"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as res:
             content = res.read().decode("utf-8")
-
         titles = []
         start = 0
         while True:
@@ -147,29 +95,29 @@ def get_google_trends():
                 break
             e = content.find("</title>", s)
             title = content[s+7:e].strip()
+            title = title.replace("<![CDATA[", "").replace("]]>", "").strip()
             if title and "Google" not in title and len(title) > 2:
                 titles.append(title)
             start = e + 1
-
         it_keywords = ["AI", "GPT", "앱", "구글", "애플", "삼성", "메타",
-                      "스마트", "IT", "테크", "소프트웨어", "게임", "클라우드",
-                      "챗봇", "로봇", "드론", "반도체", "스타트업", "유튜브"]
-
+                       "스마트", "IT", "테크", "소프트웨어", "게임", "클라우드",
+                       "챗봇", "로봇", "반도체", "스타트업"]
         it_trends = []
         for title in titles:
             for kw in it_keywords:
                 if kw.lower() in title.lower():
-                    it_trends.append(title + " 트렌드 분석")
+                    it_trends.append(title + " 완벽 분석")
                     break
-
-        print("Google 트렌드 수집: " + str(len(it_trends)) + "개")
+        print("트렌드 수집: " + str(len(it_trends)) + "개")
         return it_trends
     except Exception as e:
-        print("Google 트렌드 수집 실패: " + str(e))
+        print("트렌드 수집 실패: " + str(e))
         return []
 
 
 def get_unsplash_image(topic):
+    if not unsplash_key:
+        return None, None, None
     try:
         query = "technology computer"
         for key, val in keyword_map.items():
@@ -177,85 +125,92 @@ def get_unsplash_image(topic):
                 query = val
                 break
         encoded = urllib.parse.quote(query)
-        url = ("https://api.unsplash.com/photos/random?query=" + encoded +
-               "&orientation=landscape&client_id=" + unsplash_key)
+        url = ("https://api.unsplash.com/photos/random?query=" + encoded
+               + "&orientation=landscape&client_id=" + unsplash_key)
         req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=10) as res:
             data = json.loads(res.read().decode())
-            return data["urls"]["regular"], data["user"]["name"], data["links"]["html"]
+        return data["urls"]["regular"], data["user"]["name"], data["links"]["html"]
     except Exception as e:
-        print("이미지 가져오기 실패: " + str(e))
+        print("이미지 실패: " + str(e))
         return None, None, None
 
 
-# 기존 글 키워드 수집
-existing_keywords = get_existing_topics()
-print("기존 글 키워드: " + str(len(existing_keywords)) + "개 로드")
+def get_existing_titles():
+    titles = set()
+    for filepath in glob.glob("_posts/*.md"):
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("title:"):
+                    title = line.replace("title:", "").strip().strip('"')
+                    for w in title.split():
+                        if len(w) >= 5:
+                            titles.add(w.lower())
+    return titles
 
-# 트렌드 수집 (YouTube + Google Trends + 기본)
-youtube_topics = get_youtube_trends()
-google_topics = get_google_trends()
-all_topics = youtube_topics + google_topics + fallback_topics
-all_topics = list(dict.fromkeys(all_topics))  # 중복 제거
 
-# 중복 제거된 토픽만 선택
-unique_topics = [t for t in all_topics if not is_duplicate(t, existing_keywords)]
-print("사용 가능한 토픽: " + str(len(unique_topics)) + "개 (중복 제거 후)")
+def is_duplicate(topic, existing):
+    for w in topic.split():
+        if len(w) >= 5 and w.lower() in existing:
+            return True
+    return False
 
-if not unique_topics:
-    print("모든 토픽이 중복됨, 기본 토픽에서 랜덤 선택")
-    unique_topics = fallback_topics
 
 count = int(os.environ.get("POST_COUNT", "1"))
+today = datetime.date.today()
+date_str = today.strftime("%Y-%m-%d")
 os.makedirs("_posts", exist_ok=True)
-selected = random.sample(unique_topics, min(count, len(unique_topics)))
+
+existing = get_existing_titles()
+trending = get_trending_topics()
+all_topics = list(dict.fromkeys(trending + fallback_topics))
+unique = [t for t in all_topics if not is_duplicate(t, existing)]
+selected = random.sample(unique if unique else fallback_topics, min(count, len(unique if unique else fallback_topics)))
 
 for i, topic in enumerate(selected):
-    date = datetime.date.today() - datetime.timedelta(days=i)
-    date_str = date.strftime("%Y-%m-%d")
+    print("[" + str(i+1) + "/" + str(count) + "] " + topic[:40])
 
-    img_url, photographer, unsplash_link = get_unsplash_image(topic)
-
+    img_url, photographer, img_link = get_unsplash_image(topic)
+    img_block = ""
     if img_url:
-        image_md = "\n![" + topic + "](" + img_url + ")\n*사진: [" + photographer + "](" + unsplash_link + ") on Unsplash*\n"
-    else:
-        image_md = ""
+        img_block = "\n\n![" + topic + "](" + img_url + ")\n*© [" + photographer + "](" + img_link + ") / Unsplash*\n\n"
 
-    prompt = "다음 주제로 한국어 IT 블로그 글을 작성해줘: \"" + topic + "\"\n\n"
-    prompt += "아래 형식을 정확히 지켜서 작성해줘:\n\n"
-    prompt += "---\n"
-    prompt += "layout: post\n"
-    prompt += "title: \"글 제목\"\n"
-    prompt += "date: " + date_str + "\n"
-    prompt += "description: \"한 줄 요약 (80자 이내)\"\n"
-    prompt += "---\n"
-    prompt += image_md + "\n"
-    prompt += "본문 내용을 여기에 작성\n\n"
-    prompt += "규칙:\n"
-    prompt += "- 본문은 최소 800자 이상\n"
-    prompt += "- 소제목(##)을 3개 이상 사용\n"
-    prompt += "- 트렌드 키워드 자연스럽게 포함\n"
-    prompt += "- 독자에게 유용한 실용적인 내용\n"
-    prompt += "- 친근하고 읽기 쉬운 문체\n"
-    prompt += "- 맨 앞 --- 부터 시작해서 앞에 다른 텍스트 없이 바로 시작"
+    prompt = ("다음 주제로 한국어 IT 블로그 글을 작성해줘: \"" + topic + "\"\n\n"
+              "반드시 아래 형식 그대로 출력해:\n\n"
+              "---\n"
+              "layout: post\n"
+              "title: \"글 제목\"\n"
+              "date: " + date_str + "\n"
+              "description: \"한 줄 요약 (80자 이내)\"\n"
+              "---\n\n"
+              + img_block +
+              "본문 내용\n\n"
+              "규칙:\n"
+              "- 본문 800자 이상\n"
+              "- 소제목(##) 3개 이상\n"
+              "- 실용적이고 유익한 내용\n"
+              "- 친근한 문체\n"
+              "- 맨 앞 --- 부터 시작. 앞에 다른 텍스트 없이")
 
-    message = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    content = call_gemini(prompt)
+    if not content:
+        print("생성 실패, 건너뜀")
+        continue
 
-    content = message.content[0].text
-    slug = topic[:30].replace(" ", "-").replace("/", "-")
+    # 앞에 불필요한 텍스트 제거
+    if "---" in content:
+        content = content[content.find("---"):]
+
+    slug = topic[:30].replace(" ", "-")
     slug = "".join(c for c in slug if c.isalnum() or c == "-")
-    filename = "_posts/" + date_str + "-" + slug + ".md"
+    suffix = "" if i == 0 else "-" + str(i+1)
+    filename = "_posts/" + date_str + suffix + "-" + slug + ".md"
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print("[" + str(i+1) + "/" + str(count) + "] 완료: " + filename)
-
+    print("완료: " + filename)
     if i < len(selected) - 1:
-        time.sleep(2)
+        time.sleep(1)
 
 print("모든 글 생성 완료!")
